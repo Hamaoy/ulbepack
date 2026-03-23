@@ -1,4 +1,17 @@
 import streamlit as st
+
+# تعريف كلمة المرور
+PASSWORD = "ورشة_البركة_2026" # غيرها لأي رمز تريده
+
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.text_input("أدخل كلمة المرور للدخول للنظام", type="password", on_change=lambda: st.session_state.update(password_correct=st.session_state.password_input == PASSWORD), key="password_input")
+        return False
+    return st.session_state["password_correct"]
+
+if not check_password():
+    st.stop() # يوقف البرنامج هنا إذا الرمز خطأ
+import streamlit as st
 import math
 import os
 
