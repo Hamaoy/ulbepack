@@ -1,120 +1,137 @@
 import streamlit as st
-
-# تعريف كلمة المرور
-PASSWORD = "ورشة_البركة_2026" # غيرها لأي رمز تريده
-
-def check_password():
-    if "password_correct" not in st.session_state:
-        st.text_input("أدخل كلمة المرور للدخول للنظام", type="password", on_change=lambda: st.session_state.update(password_correct=st.session_state.password_input == PASSWORD), key="password_input")
-        return False
-    return st.session_state["password_correct"]
-
-if not check_password():
-    st.stop() # يوقف البرنامج هنا إذا الرمز خطأ
-import streamlit as st
 import math
 import os
 
-# إعداد الواجهة
-st.set_page_config(page_title="نظام تسعير الورشة", layout="wide")
+# 1. إعداد واجهة البرنامج
+st.set_page_config(page_title="نظام تسعير الورشة الخاص", layout="wide")
 
-# تصميم الـ CSS (تحديث ليشمل تنسيق الشعار)
+# 2. نظام الحماية بكلمة المرور
+PASSWORD = "ULBE2026"
+
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.markdown("<h2 style='text-align: center;'>🔐 نظام التسعير مغلق</h2>", unsafe_allow_html=True)
+        pwd = st.text_input("أدخل كلمة المرور للدخول", type="password")
+        if st.button("دخول"):
+            if pwd == PASSWORD:
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else:
+                st.error("❌ كلمة المرور غير صحيحة")
+        return False
+    return True
+
+if not check_password():
+    st.stop()
+
+# 3. تصميم الـ CSS (نعومة الخطوط والوضوح)
 st.markdown("""
     <style>
     .stApp { background-color: #0e1117; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
-    .logo-container { display: flex; justify-content: center; margin-bottom: 20px; }
-    .logo-img { max-width: 150px; height: auto; border-radius: 10px; }
-    h1 { color: #ffffff !important; font-size: 24px !important; text-align: center; font-weight: 500 !important; border-bottom: 1px solid #30363d; padding-bottom: 15px; }
+    .logo-container { display: flex; justify-content: center; margin-bottom: 10px; }
+    h1 { color: #ffffff !important; font-size: 24px !important; text-align: center; font-weight: 400 !important; border-bottom: 1px solid #30363d; padding-bottom: 15px; }
     [data-testid="stMetricValue"] { color: #00ff41 !important; font-size: 28px !important; }
-    .stButton>button { width: 100%; background-color: #238636; color: white; border-radius: 6px; height: 3em; font-size: 18px; border: none; }
-    .stButton>button:hover { background-color: #2ea043; }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    .stButton>button { width: 100%; background-color: #238636; color: white; border-radius: 6px; height: 3em; border: none; }
+    .stTable { background-color: #161b22; border-radius: 8px; }
+    #MainMenu, footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- إضافة الشعار ---
-# يبحث الكود عن ملف باسم logo.png في المستودع ويظهره
+# استدعاء الشعار إذا وجد (logo.png)
 if os.path.exists("logo.png"):
     st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-    st.image("logo.png", width=150) # يمكنك تحكم بالعرض هنا
+    st.image("logo.png", width=120)
     st.markdown('</div>', unsafe_allow_html=True)
 
 st.title("نظام التسعير الذكي للكرتون المقوى")
 
-# --- الإعدادات الجانبية ---
+# 4. الإعدادات الجانبية (الثوابت)
 with st.sidebar:
-    st.markdown("### 🛠️ الأسعار المرجعية")
+    st.markdown("### 🛠️ إعدادات التكاليف")
     p_board = st.number_input("سعر طبقة الكارتون (70x100)", value=1200)
     p_paper = st.number_input("سعر طبقة الورق (70x100)", value=235)
     st.divider()
     st.markdown("### 🎨 أجور الوجبة (لحد 1300)")
     s_print = st.number_input("أجور الطبع", value=40000)
     s_lam = st.number_input("أجور السلفنة", value=60000)
-    s_cut_labor = st.number_input("أجور ماكينة التقطيع", value=130000)
+    s_cut_lab = st.number_input("أجور التقطيع", value=130000)
     st.divider()
     st.markdown("### 🏗️ القوالب والنقل")
-    cost_die_mold = st.number_input("قالب التقطيع (كارتون+ورق)", value=100000)
-    cost_print_plates = st.number_input("قالب الطباعة (زنك)", value=30000)
-    cost_transport = st.number_input("النقليات الداخلية", value=25000)
+    c_die = st.number_input("قالب التقطيع", value=100000)
+    c_zinco = st.number_input("قالب الطباعة (زنك)", value=30000)
+    c_trans = st.number_input("النقليات", value=25000)
     st.divider()
-    magnet_price = st.number_input("سعر زوج المغناطيس", value=500)
+    mag_p = st.number_input("سعر زوج المغناطيس", value=500)
 
-# --- واجهة الإدخال الرئيسية ---
-col_main1, col_main2 = st.columns(2)
-with col_main1:
-    st.markdown("### 📦 تفاصيل الطلب")
+# 5. واجهة الإدخال
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("### 📦 الطلبية")
     box_type = st.selectbox("نوع العلبة", ["علبة وقبغ (قطعتين)", "علبة مغناطيسية", "علبة جرارة"])
     qty = st.number_input("العدد المطلوب", value=1000, step=100)
-    use_magnet = st.checkbox("إضافة مغناطيس؟")
+    use_mag = st.checkbox("إضافة مغناطيس؟")
 
-with col_main2:
+with col2:
     st.markdown("### 📐 القياسات (سم)")
-    l_c, w_c, h_c = st.columns(3)
-    with l_c: L = st.number_input("الطول", value=26.0)
-    with w_c: W = st.number_input("العرض", value=17.0)
-    with h_c: H = st.number_input("الارتفاع", value=4.0)
+    lc, wc, hc = st.columns(3)
+    with lc: L = st.number_input("الطول", value=26.0)
+    with wc: W = st.number_input("العرض", value=17.0)
+    with hc: H = st.number_input("الارتفاع", value=4.0)
 
-st.markdown("<br>", unsafe_allow_html=True)
-calculate_btn = st.button("🚀 احسب الآن")
+calc_btn = st.button("🚀 احسب الآن")
 
-# --- محرك الحسابات ---
-def run_calculation(l, w, h, q):
+# 6. محرك الحسابات
+def run_calc(l, w, h, q):
+    # إضافات الداي كت بناءً على النوع
     extra = 6 if box_type == "علبة وقبغ (قطعتين)" else 9
     bw, bh = l + (h * 2), w + (h * 2)
     pw, ph = bw + extra, bh + extra
-    b_per_s = (70 // bw) * (100 // bh)
-    p_per_half = (50 // pw) * (70 // ph)
-    p_per_full = p_per_half * 2
-    if b_per_s == 0 or p_per_full == 0: return None
-    total_b = math.ceil(q / b_per_s)
-    total_p = math.ceil(q / p_per_full)
-    printed_50x70 = total_p * 2 
-    sets = math.ceil(printed_50x70 / 1300)
+    
+    # التوزيع
+    b_per = (70 // bw) * (100 // bh)
+    p_half = (50 // pw) * (70 // ph)
+    p_full = p_half * 2
+    
+    if b_per == 0 or p_full == 0: return None
+
+    total_b = math.ceil(q / b_per)
+    total_p = math.ceil(q / p_full)
+    
+    # وجبات الطبع (شرط الـ 1300)
+    pr_50x70 = total_p * 2 
+    sets = math.ceil(pr_50x70 / 1300)
+    
     m_cost = (total_b * p_board) + (total_p * p_paper)
-    w_cost = (sets * (s_print + s_lam + s_cut_labor))
-    f_cost = cost_die_mold + cost_print_plates + cost_transport
-    if use_magnet: f_cost += (q * magnet_price)
-    total = m_cost + w_cost + f_cost
-    return total, b_per_s, total_b, total_p, printed_50x70, sets, m_cost, w_cost, f_cost
+    w_cost = (sets * (s_print + s_lam + s_cut_lab))
+    f_cost = c_die + c_zinco + c_trans + (q * mag_p if use_mag else 0)
+    
+    return (m_cost + w_cost + f_cost), b_per, total_b, total_p, pr_50x70, sets, m_cost, w_cost, f_cost
 
-if calculate_btn:
-    res = run_calculation(L, W, H, qty)
+if calc_btn:
+    res = run_calc(L, W, H, qty)
     if res:
-        total, b_per_s, b_sh, p_sh, p_50x70, sets, c_m, c_w, c_f = res
-        res_col1, res_col2 = st.columns(2)
-        res_col1.metric("سعر العلبة الواحدة", f"{round(total/qty)} د.ع")
-        res_col2.metric("الإجمالي الكلي", f"{format(total, ',')} د.ع")
+        total, b_p, b_s, p_s, p_50, sets, cm, cw, cf = res
         
-        st.markdown("### 📑 التقرير الفني")
-        t_col1, t_col2 = st.columns(2)
-        with t_col1:
-            st.markdown(f"- كارتون (70x100): **{b_sh}** طبقة\n- ورق (70x100): **{p_sh}** طبقة")
-        with t_col2:
-            st.markdown(f"- ورق طبع (50x70): **{p_50x70}** ورقة\n- عدد الوجبات: **{sets}** وجبة")
+        c_res1, c_res2 = st.columns(2)
+        c_res1.metric("سعر العلبة الواحدة", f"{round(total/qty)} د.ع")
+        c_res2.metric("الإجمالي الكلي", f"{format(total, ',')} د.ع")
 
-        with st.expander("تفاصيل بنود التكلفة"):
+        st.markdown("### 📑 التقرير الفني")
+        tc1, tc2 = st.columns(2)
+        with tc1:
+            st.markdown(f"- كارتون (70x100): **{b_s}** طبقة\n- ورق (70x100): **{p_s}** طبقة")
+        with tc2:
+            st.markdown(f"- ورق طبع (50x70): **{p_50}** ورقة\n- عدد الوجبات: **{sets}** وجبة")
+
+        with st.expander("تفاصيل التكاليف"):
             st.table({
-                "البند": ["المواد الخام", "أجور العمليات", "القوالب", "النقليات والزنك"],
-                "المبلغ (دينار)": [format(c_m, ','), format(c_w, ','), format(cost_die_mold, ','), format(cost_print_plates + cost_transport, ',')]
+                "البند": ["المواد", "أجور العمل", "القوالب والثوابت"],
+                "المبلغ": [format(cm, ','), format(cw, ','), format(cf, ',')]
             })
+
+        # نصيحة التوفير
+        for i in range(1, 11):
+            tr = run_calc(L - (i*0.1), W, H, qty)
+            if tr and tr[1] > b_p:
+                st.warning(f"💡 نصيحة: تقليل الطول {i} ملم يزيد الإنتاج لـ {tr[1]} قطع بالطبقة.")
+                break
