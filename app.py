@@ -113,4 +113,14 @@ if calculate_btn:
         st.markdown("### 📑 تقرير المطبعة (كشف الحساب)")
         t1, t2 = st.columns(2)
         with t1:
-            st.info(f"**المواد:**\n- طبقات الكارتون: {b_sh}\n- طبقات الورق: {p_sh}\n
+            st.info(f"**المواد:**\n- طبقات الكارتون: {b_sh}\n- طبقات الورق: {p_sh}\n- العلب بالطبقة: {b_per_s}")
+        with t2:
+            st.info(f"**الفنيات:**\n- أوراق الطبع (50x70): {p_50x70}\n- الوجبات المحسوبة: {sets}")
+
+        # نصيحة التوفير
+        for i in range(1, 11):
+            test_l = L - (i*0.1)
+            t_res = run_calc(test_l, W, H, qty)
+            if t_res and t_res[1] > b_per_s:
+                st.warning(f"💡 نصيحة ذكية: صغّر الطول {i} ملم لزيادة عدد العلب بالطبقة وتوفير المال!")
+                break
