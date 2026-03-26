@@ -1,148 +1,224 @@
 import streamlit as st
 import math
 import os
-import fitz  # PyMuPDF
 
-# 1. إعدادات الواجهة والحماية
-st.set_page_config(page_title="نظام تسعير الورشة الاحترافي", layout="wide")
+# 1. إعدادات الصفحة والسمة البصرية (UI)
+st.set_page_config(page_title="ULBE Smart System", layout="wide")
 
+# تثبيت الألوان والخلفية لضمان الوضوح على كل الأجهزة
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #0d1117;
+        color: #e6edf3;
+    }
+    [data-testid="stMetricValue"] {
+        color: #3fb950 !important;
+        font-size: 32px !important;
+        font-weight: bold;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #8b949e !important;
+    }
+    .main-card {
+        background-color: #161b22;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #30363d;
+        margin-bottom: 20px;
+    }
+    h1, h2, h3 {
+        color: #58a6ff !important;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #238636;
+        color: white;
+        font-weight: bold;
+        border: none;
+        height: 3em;
+    }
+    .stButton>button:hover {
+        background-color: #2ea043;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 2. نظام الحماية
 PASSWORD = "ULBE2026"
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
 def check_password():
-    if "password_correct" not in st.session_state:
-        st.markdown("<h2 style='text-align: center;'>🔐 النظام مغلق</h2>", unsafe_allow_html=True)
-        pwd = st.text_input("كلمة المرور", type="password")
+    if not st.session_state["authenticated"]:
+        st.markdown("<h2 style='text-align: center;'>🔐 نظام تسعير ULBE</h2>", unsafe_allow_html=True)
+        pwd = st.text_input("ادخل كلمة المرور", type="password")
         if st.button("دخول"):
-            if pwd == PASSWORD: st.session_state["password_correct"] = True; st.rerun()
-            else: st.error("❌ خطأ")
+            if pwd == PASSWORD:
+                st.session_state["authenticated"] = True
+                st.rerun()
+            else:
+                st.error("❌ كلمة المرور غير صحيحة")
         return False
     return True
 
 if not check_password(): st.stop()
 
-# 2. إدارة الأسعار (مع الاحتفاظ بكل التفاصيل)
-default_prices = {
-    "p_b": 1200, "p_p": 235, "s_p": 40000, "s_l": 60000, "s_c": 130000,
-    "c_d": 100000, "c_z": 30000, "c_t": 25000, "m_p": 500, "labor": 50000, "dig_p": 1500
-}
-for k, v in default_prices.items():
-    if k not in st.session_state: st.session_state[k] = v
+# 3. إدارة الأسعار الافتراضية
+if 'prices' not in st.session_state:
+    st.session_state.prices = {
+        "p_b": 1200, "p_p": 250, "dig_p": 1500, "ribbon_p": 300, 
+        "labor": 50000, "zinc": 30000, "mold": 100000, "transport": 25000,
+        "print_job": 40000, "lamination": 60000, "cutting": 130000
+    }
 
 def reset_prices():
-    for k, v in default_prices.items(): st.session_state[k] = v
+    st.session_state.prices = {
+        "p_b": 1200, "p_p": 250, "dig_p": 1500, "ribbon_p": 300, 
+        "labor": 50000, "zinc": 30000, "mold": 100000, "transport": 25000,
+        "print_job": 40000, "lamination": 60000, "cutting": 130000
+    }
 
-# 3. محرك قراءة الـ PDF المطور (يقرأ اللون أو حجم الصفحة)
-def get_pdf_dim(file_bytes):
-    if file_bytes is None: return 0, 0
-    try:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        page = doc[0]
-        # محاولة أولى: قراءة الخطوط الملونة
-        drawings = page.get_drawings()
-        PT_TO_CM = 28.346
-        rects = []
-        for path in drawings:
-            rects.append(path["rect"])
-        
-        if rects:
-            full_rect = fitz.Rect(rects[0])
-            for r in rects: full_rect |= r
-            return round(full_rect.width / PT_TO_CM, 1), round(full_rect.height / PT_TO_CM, 1)
-        
-        # محاولة ثانية: إذا لم توجد خطوط، نأخذ حجم الصفحة (Artboard)
-        return round(page.rect.width / PT_TO_CM, 1), round(page.rect.height / PT_TO_CM, 1)
-    except: return 0, 0
-
-# 4. التصميم
-st.markdown("""<style>
-    .stApp { background-color: #0e1117; color: #e0e0e0; }
-    .stMetric { background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
-    .stButton>button { background-color: #238636; color: white; border-radius: 8px; font-weight: bold; }
-</style>""", unsafe_allow_html=True)
-
-if os.path.exists("logo.png"):
-    c1, c2, c3 = st.columns([2, 1, 2]); c2.image("logo.png", use_container_width=True)
+# 4. الشعار
+col_logo_1, col_logo_2, col_logo_3 = st.columns([2, 1, 2])
+with col_logo_2:
+    if os.path.exists("logo.png"):
+        st.image("logo.png", use_container_width=True)
+    else:
+        st.markdown("<h1 style='text-align: center;'>ULBE</h1>", unsafe_allow_html=True)
 
 # 5. القائمة الجانبية (الإعدادات)
 with st.sidebar:
-    st.header("🛠️ الإعدادات")
-    if st.button("🔄 ريسيت الأسعار"): reset_prices(); st.rerun()
-    st.session_state.p_b = st.number_input("سعر الكارتون", value=st.session_state.p_b)
-    st.session_state.p_p = st.number_input("سعر الورق", value=st.session_state.p_p)
-    st.session_state.dig_p = st.number_input("سعر طبعة الديجيتال", value=st.session_state.dig_p)
-    st.session_state.labor = st.number_input("أجور العمال", value=st.session_state.labor)
-    # بقية الأسعار (الطبع، السلفنة، الخ) مخفية للتوفير المساحة وتعمل في الخلفية
+    st.header("🛠️ إعدادات التكاليف")
+    if st.button("🔄 إعادة ضبط المصنع"): reset_prices(); st.rerun()
+    p = st.session_state.prices
+    p["p_b"] = st.number_input("سعر لوح الكارتون", value=p["p_b"])
+    p["p_p"] = st.number_input("سعر فرخ الورق", value=p["p_p"])
+    p["dig_p"] = st.number_input("سعر طبعة الديجيتال", value=p["dig_p"])
+    p["ribbon_p"] = st.number_input("سعر متر الشريط (للـ Kurdele)", value=p["ribbon_p"])
+    st.divider()
+    p["labor"] = st.number_input("أجور العمال", value=p["labor"])
+    p["mold"] = st.number_input("تكلفة القالب", value=p["mold"])
 
-# 6. واجهة العمل (Workflow)
-st.title("🚀 نظام تحليل العلب الذكي")
+# 6. المحرك الهندسي (Logic) - بناءً على تحليل ملفات الـ PDF الخاصة بك
+def calculate_production(L, W, H, b_type):
+    parts = []
+    # معادلات الإزاحة (Offsets) مستخرجة من ملفاتك (زيادة التغليف 4.5 سم للورق)
+    if b_type == "علبة وقبغ (قطعتين)":
+        parts.append({"name": "كارتون الحوض", "w": L + (2*H), "h": W + (2*H), "type": "board"})
+        parts.append({"name": "كارتون القبغ", "w": (L+0.5) + (2*3), "h": (W+0.5) + (2*3), "type": "board"})
+        parts.append({"name": "ورق الحوض", "w": L + (2*H) + 4.5, "h": W + (2*H) + 4.5, "type": "paper"})
+        parts.append({"name": "ورق القبغ", "w": (L+0.5) + (2*3) + 4.5, "h": (W+0.5) + (2*3) + 4.5, "type": "paper"})
+    
+    elif b_type in ["علبة مغناطيسية", "علبة شريط (Kurdele)"]:
+        parts.append({"name": "كارتون الحوض", "w": L + (2*H), "h": W + (2*H), "type": "board"})
+        parts.append({"name": "كارتون الغلاف (Cover)", "w": (2*L) + (2*H) + 2, "h": W + 1, "type": "board"})
+        parts.append({"name": "ورق الحوض", "w": L + (2*H) + 4.5, "h": W + (2*H) + 4.5, "type": "paper"})
+        parts.append({"name": "ورق الغلاف الخارجي", "w": (2*L) + (2*H) + 7, "h": W + 5, "type": "paper"})
+        parts.append({"name": "البطانة الداخلية (Inner)", "w": (2*L) + (2*H), "h": W, "type": "paper"})
 
-tab1, tab2 = st.tabs(["📂 رفع ملفات الأجزاء (PDF)", "⌨️ إدخال يدوي سريع"])
+    elif b_type == "علبة جرارة (مجر)":
+        parts.append({"name": "كارتون المجر", "w": L + (2*H), "h": W + (2*H), "type": "board"})
+        parts.append({"name": "كارتون الكفر (Sleeve)", "w": (2*W) + (2*H) + 2, "h": L, "type": "board"})
+        parts.append({"name": "ورق المجر", "w": L + (2*H) + 4.5, "h": W + (2*H) + 4.5, "type": "paper"})
+        parts.append({"name": "ورق الكفر الخارجي", "w": (2*W) + (2*H) + 7, "h": L + 4.5, "type": "paper"})
+    
+    return parts
 
-with tab1:
-    st.subheader("ارفع تصميم كل جزء بشكل منفصل")
-    up_col1, up_col2 = st.columns(2)
-    with up_col1:
-        file_body = st.file_uploader("1️⃣ ملف الكارتون (الداي كت)", type="pdf")
-        file_paper = st.file_uploader("2️⃣ ملف الورق الخارجي", type="pdf")
-    with up_col2:
-        b_type = st.selectbox("نوع العلبة المختارة", ["علبة وقبغ (قطعتين)", "علبة مغناطيسية", "علبة جرارة"])
-        pr_type = st.selectbox("طريقة الطباعة", ["أوفست (Offset)", "ديجيتال (Digital)"])
-        qty = st.number_input("العدد", value=1000, step=100, key="pdf_qty")
+# 7. واجهة الإدخال
+st.title("🚀 حاسبة الإنتاج الذكية")
+input_col1, input_col2 = st.columns(2)
 
-with tab2:
-    st.subheader("الإدخال اليدوي التقليدي")
-    m_col1, m_col2, m_col3 = st.columns(3)
-    L_in = m_col1.number_input("الطول (L)", value=20.0)
-    W_in = m_col2.number_input("العرض (W)", value=15.0)
-    H_in = m_col3.number_input("الارتفاع (H)", value=5.0)
+with input_col1:
+    st.markdown("### 📋 تفاصيل الطلبية")
+    box_selection = st.selectbox("نوع العلبة", ["علبة وقبغ (قطعتين)", "علبة مغناطيسية", "علبة شريط (Kurdele)", "علبة جرارة (مجر)"])
+    print_method = st.radio("نوع الطباعة", ["أوفست (70x100)", "ديجيتال (33x70)"], horizontal=True)
+    order_qty = st.number_input("الكمية المطلوبة", value=1000, step=100)
 
-# 7. منطق الحسابات (Engine)
-if st.button("🚀 احسب التكلفة الآن"):
-    # تحديد القياسات المفتوحة
-    if file_body and file_paper:
-        bw, bh = get_pdf_dim(file_body.read())
-        pw, ph = get_pdf_dim(file_paper.read())
-        st.success(f"✅ تم القراءة: الكارتون {bw}x{bh} سم | الورق {pw}x{ph} سم")
-    else:
-        # حساب يدوي بناءً على نوع العلبة
-        extra = 6 if "قطعتين" in b_type else 9
-        bw, bh = L_in + (H_in * 2), W_in + (H_in * 2)
-        pw, ph = bw + extra, bh + extra
+with input_col2:
+    st.markdown("### 📐 القياسات الصافية (سم)")
+    l_val = st.number_input("الطول الداخلي (L)", value=20.0)
+    w_val = st.number_input("العرض الداخلي (W)", value=15.0)
+    h_val = st.number_input("الارتفاع الداخلي (H)", value=5.0)
 
-    # حساب عدد القطع بالطبقة
-    b_per = max((70 // bw) * (100 // bh), (100 // bw) * (70 // bh))
-    is_dig = "Digital" in pr_type
-    if is_dig:
-        p_per = max((33 // pw) * (70 // ph), (70 // pw) * (33 // ph))
-    else:
-        p_per = max((70 // pw) * (100 // ph), (100 // pw) * (70 // ph))
+st.divider()
 
-    if b_per > 0 and p_per > 0:
-        # الحسابات المالية (نفس معادلاتك السابقة لضمان الدقة)
-        total_b = math.ceil(qty / b_per)
-        total_p = math.ceil(qty / p_per)
-        m_cost = (total_b * st.session_state.p_b) + (total_p * st.session_state.p_p)
-        f_cost = st.session_state.c_d + st.session_state.c_t + st.session_state.labor
+# 8. تنفيذ الحسابات
+if st.button("احسب التكلفة والإنتاج 🔥"):
+    box_parts = calculate_production(l_val, w_val, h_val, box_selection)
+    
+    total_m_cost = 0
+    prod_details = []
+    
+    st.markdown("### 🏭 تفاصيل القص (التحليل الفني)")
+    grid = st.columns(len(box_parts))
+    
+    for i, part in enumerate(box_parts):
+        # تحديد حجم ورقة الطباعة بناءً على النوع
+        sheet_w, sheet_h = (33, 70) if "ديجيتال" in print_method and part['type'] == "paper" else (70, 100)
         
-        if is_dig:
-            w_cost = total_p * st.session_state.dig_p
-            w_cost += (math.ceil(total_p / 1300) * (st.session_state.s_l + st.session_state.s_c))
+        # حساب كم قطعة تطلع بالطبقة
+        per_sheet = max((sheet_w // part['w']) * (sheet_h // part['h']), (sheet_h // part['w']) * (sheet_w // part['h']))
+        
+        if per_sheet <= 0:
+            st.error(f"⚠️ الجزء [{part['name']}] قياسه ({part['w']}x{part['h']}) أكبر من الورق!")
+            continue
+            
+        needed_sheets = math.ceil(order_qty / per_sheet)
+        
+        # حساب التكلفة للمواد
+        if part['type'] == "board":
+            cost = needed_sheets * st.session_state.prices["p_b"]
         else:
-            f_cost += st.session_state.c_z
-            sets = math.ceil((total_p * 2) / 1300)
-            w_cost = sets * (st.session_state.s_p + st.session_state.s_l + st.session_state.s_c)
+            if "ديجيتال" in print_method:
+                cost = needed_sheets * st.session_state.prices["dig_p"]
+            else:
+                cost = needed_sheets * st.session_state.prices["p_p"]
+        
+        total_m_cost += cost
+        
+        with grid[i]:
+            st.markdown(f"""
+            <div style='background:#1c2128; padding:10px; border-radius:8px; border:1px solid #444; text-align:center;'>
+                <small style='color:#8b949e;'>{part['name']}</small><br>
+                <b style='color:#58a6ff;'>{part['w']}x{part['h']}</b><br>
+                <span style='font-size:12px;'>القطع/الطبقة: {int(per_sheet)}</span>
+            </div>
+            """, unsafe_allow_html=True)
 
-        total = m_cost + w_cost + f_cost
-        
-        # العرض
-        c1, c2 = st.columns(2)
-        with c1: st.metric("سعر المفرد", f"{round(total/qty)} دينار")
-        with c2: st.metric("الإجمالي", f"{format(total, ',')} دينار")
-        
-        # التقرير
-        st.divider()
-        st.markdown("### 📑 تقرير المطبعة")
-        col_rep1, col_rep2 = st.columns(2)
-        col_rep1.info(f"📦 المواد:\n- كارتون: {total_b} طبقة\n- ورق: {total_p} طبقة\n- قطع/طبقة: {b_per}")
-        col_rep2.info(f"🛠️ العمليات:\n- نوع الطباعة: {pr_type}\n- أجور العمل: {format(w_cost, ',')} د.ع")
+    # تكاليف الشريط (إذا كانت علبة شريط)
+    ribbon_cost = 0
+    if box_selection == "علبة شريط (Kurdele)":
+        ribbon_cost = order_qty * 0.6 * st.session_state.prices["ribbon_p"] # افتراض 60 سم لكل علبة
+
+    # تكاليف العمل والتشغيل
+    fixed_costs = st.session_state.prices["mold"] + st.session_state.prices["transport"] + st.session_state.prices["labor"]
+    if "أوفست" in print_method:
+        fixed_costs += st.session_state.prices["zinc"]
+        work_costs = (math.ceil(order_qty/1000)) * (st.session_state.prices["print_job"] + st.session_state.prices["lamination"] + st.session_state.prices["cutting"])
     else:
-        st.error("⚠️ القياسات كبيرة جداً على الخامات!")
+        work_costs = (math.ceil(order_qty/1000)) * (st.session_state.prices["lamination"] + st.session_state.prices["cutting"])
+
+    total_final = total_m_cost + fixed_costs + work_costs + ribbon_cost
+    unit_price = total_final / order_qty
+
+    # 9. عرض النتائج النهائية
+    st.divider()
+    res_col1, res_col2 = st.columns(2)
+    with res_col1:
+        st.metric("سعر العلبة الواحدة", f"{round(unit_price)} د.ع")
+    with res_col2:
+        st.metric("إجمالي مبلغ الطلبية", f"{format(int(total_final), ',')} د.ع")
+
+    st.markdown(f"""
+    <div class="main-card">
+        <h3 style='margin-top:0;'>📝 ملخص تقرير الإنتاج</h3>
+        <table style='width:100%; color:white;'>
+            <tr><td>تكلفة المواد الأولية (كارتون وورق):</td><td style='text-align:left;'>{format(int(total_m_cost), ',')} د.ع</td></tr>
+            <tr><td>تكلفة الشريط (Ribbon):</td><td style='text-align:left;'>{format(int(ribbon_cost), ',')} د.ع</td></tr>
+            <tr><td>أجور العمال والقالب والزنكات:</td><td style='text-align:left;'>{format(int(fixed_costs), ',')} د.ع</td></tr>
+            <tr><td>أجور الطبع والسلفنة والتقطيع:</td><td style='text-align:left;'>{format(int(work_costs), ',')} د.ع</td></tr>
+            <tr style='color:#3fb950; font-weight:bold; font-size:1.2em;'><td>الإجمالي الكلي:</td><td style='text-align:left;'>{format(int(total_final), ',')} د.ع</td></tr>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
