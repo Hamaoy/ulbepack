@@ -170,6 +170,12 @@ if st.button(T["calc"]):
     total_board = 0
     total_paper = 0
 
+    # نحسب كلشي بالبداية حتى نتجنب الاخطاء
+    cost_board = 0
+    cost_paper = 0
+    zinc_cost = 0
+    ribbon_cost = 0
+
     for name,w,h,t in parts:
         sw,sh = (70,100) if t=='b' else (sheet_w,sheet_h)
 
@@ -182,26 +188,26 @@ if st.button(T["calc"]):
         sheets = math.ceil(qty/per)
         sheets *= (1 + ps['waste']/100)
 
-        if t=='b': total_board += sheets
-        else: total_paper += sheets
+        if t=='b': 
+            total_board += sheets
+        else: 
+            total_paper += sheets
 
         st.write(f"{name}: {int(per)} per sheet → {int(sheets)} sheets")
 
+    # نحسب التكاليف بعد اللوب
     cost_board = total_board * ps['p_b']
     paper_price = ps['p_p'] if print_method=="Offset" else ps['dig']
     cost_paper = total_paper * paper_price
 
     zinc_cost = colors * ps['zinc'] if print_method=="Offset" else 0
-    # تأكد تعريف ribbon بكل الحالات
     ribbon_cost = qty * 0.6 * ps['rib'] if "Kurdele" in box_type else 0
 
-    # 🟢 منطق الطباعة
-if print_method == "Digital":
-    # فقط اجور طبع الدجتل + مواد
-    total = cost_board + cost_paper + ribbon_cost
-else:
-    # اوفست = كل التكاليف
-    total = cost_board + cost_paper + zinc_cost + ribbon_cost + ps['lab'] + ps['mold'] + ps['print'] + ps['lam'] + ps['cut']
+    # منطق الطباعة
+    if print_method == "Digital":
+        total = cost_board + cost_paper + ribbon_cost
+    else:
+        total = cost_board + cost_paper + zinc_cost + ribbon_cost + ps['lab'] + ps['mold'] + ps['print'] + ps['lam'] + ps['cut']
 
     st.markdown(f"""
     <div class='result-card'>
