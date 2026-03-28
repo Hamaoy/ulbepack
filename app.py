@@ -59,26 +59,32 @@ T = {
 }[lang]
 
 # ================== DEFAULT PRICES ==================
-# 🟢 رجعنا قائمة الأسعار (Sidebar)
+# 🟢 قائمة الأسعار + زر Reset
 with st.sidebar:
     st.header("💰 التحكم بالاسعار")
 
+    default_prices = {
+        "p_b": 1200,
+        "p_p": 250,
+        "dig": 1500,
+        "rib": 300,
+        "lab": 50000,
+        "mold": 100000,
+        "print": 40000,
+        "lam": 60000,
+        "cut": 130000,
+        "zinc": 25000,
+        "waste": 5
+    }
+
     if 'p' not in st.session_state:
-        st.session_state.p = {
-            "p_b": 1200,
-            "p_p": 250,
-            "dig": 1500,
-            "rib": 300,
-            "lab": 50000,
-            "mold": 100000,
-            "print": 40000,
-            "lam": 60000,
-            "cut": 130000,
-            "zinc": 25000,
-            "waste": 5
-        }
+        st.session_state.p = default_prices.copy()
 
     ps = st.session_state.p
+
+    if st.button("🔄 Reset الأسعار"):
+        st.session_state.p = default_prices.copy()
+        st.rerun()
 
     ps["p_b"] = st.number_input("سعر الكارتون", value=ps["p_b"])
     ps["p_p"] = st.number_input("سعر ورق اوفست", value=ps["p_p"])
@@ -93,24 +99,6 @@ with st.sidebar:
     ps["cut"] = st.number_input("الداي كت", value=ps["cut"])
     ps["zinc"] = st.number_input("سعر الزنك/لون", value=ps["zinc"])
     ps["waste"] = st.number_input("نسبة الهدر %", value=ps["waste"])
-
-# ================== DEFAULT PRICES ==================
-if 'p' not in st.session_state:
-    st.session_state.p = {
-        "p_b": 1200,
-        "p_p": 250,
-        "dig": 1500,
-        "rib": 300,
-        "lab": 50000,
-        "mold": 100000,
-        "print": 40000,
-        "lam": 60000,
-        "cut": 130000,
-        "zinc": 25000,
-        "waste": 5
-    }
-
-ps = st.session_state.p
 
 # ================== INPUTS ==================
 st.title(T["title"])
@@ -206,6 +194,12 @@ if st.button(T["calc"]):
     zinc_cost = colors * ps['zinc'] if print_method=="Offset" else 0
     ribbon_cost = qty * 0.6 * ps['rib'] if "Kurdele" in box_type else 0
 
+    # 🟢 منطق الطباعة
+if print_method == "Digital":
+    # فقط اجور طبع الدجتل + مواد
+    total = cost_board + cost_paper + ribbon_cost
+else:
+    # اوفست = كل التكاليف
     total = cost_board + cost_paper + zinc_cost + ribbon_cost + ps['lab'] + ps['mold'] + ps['print'] + ps['lam'] + ps['cut']
 
     st.markdown(f"""
