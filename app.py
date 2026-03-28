@@ -156,16 +156,29 @@ def calc_details(parts, sw, sh):
         total += sheets
     return details, total
 
+def safe_div(qty, per_sheet):
+    return math.ceil(qty / per_sheet) if per_sheet else float("inf")
+
+
 def smart_combine(parts):
     if len(parts) != 2:
         return None
 
     (_, w1, h1), (_, w2, h2) = parts
 
-    sep = sum([math.ceil(qty / fit(70,100,w,h)) for _,w,h in parts])
+    # Separate
+    sep = sum([
+        safe_div(qty, fit(70,100,w,h))
+        for _, w, h in parts
+    ])
 
-    comb_h = math.ceil(qty / fit(70,100, w1+w2, max(h1,h2)))
-    comb_v = math.ceil(qty / fit(70,100, max(w1,w2), h1+h2))
+    # Combine Horizontal
+    per_h = fit(70,100, w1+w2, max(h1,h2))
+    comb_h = safe_div(qty, per_h)
+
+    # Combine Vertical
+    per_v = fit(70,100, max(w1,w2), h1+h2)
+    comb_v = safe_div(qty, per_v)
 
     return min(sep, comb_h, comb_v)
 
