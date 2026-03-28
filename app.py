@@ -16,7 +16,7 @@ html, body {
     padding:20px;
     border-radius:12px;
     border:2px solid #004E96;
-    margin-top:15px
+    margin-top:15px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -46,20 +46,8 @@ with col2:
 lang = st.radio("Language", ["AR", "TR"], horizontal=True)
 
 TEXT = {
-    "AR": {
-        "title": "نظام ULBE",
-        "box": "نوع العلبة",
-        "print": "الطباعة",
-        "qty": "الكمية",
-        "calc": "احسب"
-    },
-    "TR": {
-        "title": "ULBE Sistem",
-        "box": "Kutu Tipi",
-        "print": "Baskı",
-        "qty": "Adet",
-        "calc": "Hesapla"
-    }
+    "AR": {"title": "نظام ULBE", "box": "نوع العلبة", "print": "الطباعة", "qty": "الكمية", "calc": "احسب"},
+    "TR": {"title": "ULBE Sistem", "box": "Kutu Tipi", "print": "Baskı", "qty": "Adet", "calc": "Hesapla"}
 }[lang]
 
 # ================= BOX TYPES =================
@@ -153,17 +141,13 @@ def rotate_fit(w, h):
     return max(normal, rotated)
 
 
-def get_per_sheet(w, h):
-    return rotate_fit(w, h)
-
-
 def calc_single(qty, w, h):
-    per = get_per_sheet(w, h)
+    per = rotate_fit(w, h)
     return per, safe_div(qty, per)
 
 
 def calc_combined(qty, w1, h1, w2, h2):
-    per = get_per_sheet(w1 + w2, max(h1, h2))
+    per = rotate_fit(w1 + w2, max(h1, h2))
     return per, safe_div(qty, per)
 
 
@@ -176,6 +160,9 @@ def calc_hybrid(qty, w1, h1, w2, h2):
 
             total_w = b * w1 + l * w2
             max_h = max(h1, h2)
+
+            if total_w <= 0:
+                continue
 
             per = max(
                 (SHEET_W // total_w) * (SHEET_H // max_h),
@@ -200,7 +187,6 @@ def smart_engine(qty, parts):
 
     (_, w1, h1), (_, w2, h2) = parts
 
-    # separate
     details = []
     total_sep = 0
 
@@ -209,15 +195,33 @@ def smart_engine(qty, parts):
         details.append((name, per, sheets))
         total_sep += sheets
 
-    # combined
     _, combined = calc_combined(qty, w1, h1, w2, h2)
-
-    # hybrid
     _, hybrid = calc_hybrid(qty, w1, h1, w2, h2)
 
     best = min(total_sep, combined, hybrid)
 
     return details, best
+
+
+def get_parts(L, W, H, box_type):
+
+    if box_type == "kapak":
+        return [
+            ("Base", L + 2*H, W + 2*H),
+            ("Lid", L + 6.5, W + 6.5)
+        ]
+
+    elif box_type == "magnetic":
+        return [
+            ("Body", L + 2*H, W + 2*H),
+            ("Cover", L + 4, W + 4)
+        ]
+
+    else:
+        return [
+            ("Main", L + 2*H, W + 2*H)
+        ]
+
 
 # ================= CALC =================
 if st.button(TEXT["calc"]):
@@ -225,58 +229,51 @@ if st.button(TEXT["calc"]):
     box_key = BOX_TYPES[lang][box_type]
     parts = get_parts(L, W, H, box_key)
 
-   # ===== BOARD (SMART ENGINE) =====
-board_details, board_total = smart_engine(qty, parts)
+    board_details, board_total = smart_engine(qty, parts)
 
-    # ===== PAPER =====
     if print_method == "Offset":
-        pw, ph = 70, 100
+        paper_details, paper_total = smart_engine(qty, parts)
     else:
-        pw, ph = 33, 70
+        paper_details, paper_total = smart_engine(qty, parts)
 
-   paper_parts, paper_total = smart_engine(qty, parts)
-
-    # ===== WASTE =====
     board_total = math.ceil(board_total * (1 + ps["waste"]))
     paper_total = math.ceil(paper_total * (1 + ps["waste"]))
 
-    # ===== COST =====
     cost_board = board_total * ps["board"]
+
     paper_price = ps["offset"] if print_method == "Offset" else ps["digital"]
     cost_paper = paper_total * paper_price
+
     labor = ps["labor"] * qty
     zinc = colors * ps["zinc"] if print_method == "Offset" else 0
 
-    total = (cost_board + cost_paper + labor +
-             zinc + ps["mold"] + ps["print"] + ps["lam"] + ps["cut"])
+    total = (
+        cost_board + cost_paper + labor +
+        zinc + ps["mold"] + ps["print"] + ps["lam"] + ps["cut"]
+    )
 
     # ================= OUTPUT =================
     st.markdown("### Board Details")
     for n, per, s in board_details:
-        st.write(f"{n} Board: {per} per sheet → {s} sheets")
+        st.write(f"{n}: {per} per sheet → {s} sheets")
 
     st.markdown("### Paper Details")
     for n, per, s in paper_details:
-        st.write(f"{n} Paper: {per} per sheet → {s} sheets")
+        st.write(f"{n}: {per} per sheet → {s} sheets")
 
     st.markdown(f"""
     <div class='result-card'>
-
-    <h3>Production Cost Breakdown</h3>
-
-    Board Cost: {cost_board:,.0f}<br>
-    Paper Cost: {cost_paper:,.0f}<br>
-    Labor: {labor:,.0f}<br>
-    Zinc Plates: {zinc:,.0f}<br>
-    Mold: {ps["mold"]:,.0f}<br>
-    Printing: {ps["print"]:,.0f}<br>
-    Lamination: {ps["lam"]:,.0f}<br>
-    Cutting: {ps["cut"]:,.0f}<br>
-
-    <hr>
-
-    <h2>Total: {total:,.0f}</h2>
-    <h3>Unit Price: {total/qty:,.0f}</h3>
-
+        <h3>Production Cost</h3>
+        Board: {cost_board:,.0f}<br>
+        Paper: {cost_paper:,.0f}<br>
+        Labor: {labor:,.0f}<br>
+        Zinc: {zinc:,.0f}<br>
+        Mold: {ps["mold"]:,.0f}<br>
+        Printing: {ps["print"]:,.0f}<br>
+        Lamination: {ps["lam"]:,.0f}<br>
+        Cutting: {ps["cut"]:,.0f}<br>
+        <hr>
+        <h2>Total: {total:,.0f}</h2>
+        <h3>Unit: {total/qty:,.0f}</h3>
     </div>
     """, unsafe_allow_html=True)
