@@ -192,6 +192,7 @@ if st.button(T["calc"]):
     cost_paper = total_paper * paper_price
 
     zinc_cost = colors * ps['zinc'] if print_method=="Offset" else 0
+    # تأكد تعريف ribbon بكل الحالات
     ribbon_cost = qty * 0.6 * ps['rib'] if "Kurdele" in box_type else 0
 
     # 🟢 منطق الطباعة
