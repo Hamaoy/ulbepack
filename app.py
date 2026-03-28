@@ -1,7 +1,23 @@
 import streamlit as st
 import math
+import os
 
 st.set_page_config(page_title="ULBE Production Pro+", layout="wide")
+
+# ================== LOGIN ==================
+if "auth" not in st.session_state:
+    st.session_state.auth = False
+
+if not st.session_state.auth:
+    st.title("🔐 تسجيل الدخول | Login")
+    password = st.text_input("كلمة المرور / Password", type="password")
+    if st.button("دخول / Login"):
+        if password == "ulbe2026":
+            st.session_state.auth = True
+            st.rerun()
+        else:
+            st.error("كلمة المرور غير صحيحة")
+    st.stop()
 
 # ================== STYLE ==================
 st.markdown("""
@@ -10,6 +26,37 @@ st.markdown("""
 .result-card { background:#fff;padding:20px;border-radius:12px;border:2px solid #004E96;margin-top:15px }
 </style>
 """, unsafe_allow_html=True)
+
+# ================== LOGO ==================
+col1, col2, col3 = st.columns([1,2,1])
+with col2:
+    if os.path.exists("logo.png"):
+        st.image("logo.png", use_container_width=True)
+
+# ================== LANGUAGE ==================
+lang = st.radio("🌐 Language / اللغة", ["AR", "TR"], horizontal=True)
+
+# ================== TEXT ==================
+T = {
+    "AR": {
+        "title":"نظام ULBE الذكي",
+        "box":"نوع العلبة",
+        "print":"الطباعة",
+        "qty":"الكمية",
+        "calc":"احسب",
+        "total":"الإجمالي",
+        "unit":"سعر القطعة"
+    },
+    "TR": {
+        "title":"ULBE Akıllı Sistem",
+        "box":"Kutu Tipi",
+        "print":"Baskı",
+        "qty":"Adet",
+        "calc":"Hesapla",
+        "total":"Toplam",
+        "unit":"Birim Fiyat"
+    }
+}[lang]
 
 # ================== DEFAULT PRICES ==================
 if 'p' not in st.session_state:
@@ -30,21 +77,21 @@ if 'p' not in st.session_state:
 ps = st.session_state.p
 
 # ================== INPUTS ==================
-st.title("ULBE Smart Calculator PRO 🚀")
+st.title(T["title"])
 
 col1, col2 = st.columns(2)
 
 with col1:
-    box_type = st.selectbox("نوع العلبة", [
+    box_type = st.selectbox(T["box"], [
         "علبة وقبغ (قطعتين)",
         "علبة مغناطيسية",
         "علبة شريط (Kurdele)",
         "علبة جرارة (مجر)"
     ])
 
-    print_method = st.radio("الطباعة", ["Offset", "Digital"])
-    colors = st.number_input("عدد الألوان (Offset فقط)", value=4)
-    qty = st.number_input("الكمية", value=1000)
+    print_method = st.radio(T["print"], ["Offset", "Digital"])
+    colors = st.number_input("Colors", value=4)
+    qty = st.number_input(T["qty"], value=1000)
 
 with col2:
     L = st.number_input("L", value=20.0)
@@ -55,30 +102,30 @@ with col2:
 def get_parts(L, W, H, t):
     parts = []
 
-    if t == "علبة وقبغ (قطعتين)":
+    if "وقبغ" in t:
         parts += [
-            ("كارتون الحوض", L+2*H, W+2*H, 'b'),
-            ("كارتون القبغ", L+6.5, W+6.5, 'b'),
-            ("ورق الحوض", L+2*H+4.5, W+2*H+4.5, 'p'),
-            ("ورق القبغ", L+11, W+11, 'p')
+            ("Base Board", L+2*H, W+2*H, 'b'),
+            ("Lid Board", L+6.5, W+6.5, 'b'),
+            ("Base Paper", L+2*H+4.5, W+2*H+4.5, 'p'),
+            ("Lid Paper", L+11, W+11, 'p')
         ]
 
-    elif t == "علبة جرارة (مجر)":
+    elif "جرارة" in t:
         parts += [
-            ("كارتون المجر", L+2*H, W+2*H, 'b'),
-            ("كارتون الكفر", 2*W+2*H+2, L, 'b'),
-            ("ورق المجر", L+2*H+4.5, W+2*H+4.5, 'p'),
-            ("ورق الكفر", 2*W+2*H+7, L+4.5, 'p'),
-            ("بطانة داخلية", 2*L+2*H, W, 'p')
+            ("Drawer", L+2*H, W+2*H, 'b'),
+            ("Sleeve", 2*W+2*H+2, L, 'b'),
+            ("Drawer Paper", L+2*H+4.5, W+2*H+4.5, 'p'),
+            ("Sleeve Paper", 2*W+2*H+7, L+4.5, 'p'),
+            ("Inner", 2*L+2*H, W, 'p')
         ]
 
-    elif t in ["علبة مغناطيسية", "علبة شريط (Kurdele)"]:
+    else:
         parts += [
-            ("كارتون الحوض", L+2*H, W+2*H, 'b'),
-            ("كارتون الغلاف", 2*L+2*H+2, W+1, 'b'),
-            ("ورق الحوض", L+2*H+4.5, W+2*H+4.5, 'p'),
-            ("ورق الغلاف", 2*L+2*H+7, W+5, 'p'),
-            ("بطانة داخلية", 2*L+2*H, W, 'p')
+            ("Base", L+2*H, W+2*H, 'b'),
+            ("Cover", 2*L+2*H+2, W+1, 'b'),
+            ("Base Paper", L+2*H+4.5, W+2*H+4.5, 'p'),
+            ("Cover Paper", 2*L+2*H+7, W+5, 'p'),
+            ("Inner", 2*L+2*H, W, 'p')
         ]
 
     return parts
@@ -90,7 +137,7 @@ def fit(sheet_w, sheet_h, w, h):
     return max((sheet_w//w)*(sheet_h//h), (sheet_h//w)*(sheet_w//h))
 
 # ================== CALC ==================
-if st.button("احسب"):
+if st.button(T["calc"]):
 
     parts = get_parts(L, W, H, box_type)
 
@@ -99,15 +146,13 @@ if st.button("احسب"):
     total_board = 0
     total_paper = 0
 
-    st.subheader("تفاصيل الإنتاج")
-
     for name,w,h,t in parts:
         sw,sh = (70,100) if t=='b' else (sheet_w,sheet_h)
 
         per = fit(sw,sh,w,h)
 
         if per == 0:
-            st.error(f"❌ {name} لا يمكن طباعته على الشيت")
+            st.error(f"❌ {name} too big")
             continue
 
         sheets = math.ceil(qty/per)
@@ -116,26 +161,20 @@ if st.button("احسب"):
         if t=='b': total_board += sheets
         else: total_paper += sheets
 
-        st.write(f"{name}: {int(per)} باللوح → تحتاج {int(sheets)} لوح")
+        st.write(f"{name}: {int(per)} per sheet → {int(sheets)} sheets")
 
-    # ================= COST =================
     cost_board = total_board * ps['p_b']
     paper_price = ps['p_p'] if print_method=="Offset" else ps['dig']
     cost_paper = total_paper * paper_price
 
     zinc_cost = colors * ps['zinc'] if print_method=="Offset" else 0
-    ribbon_cost = qty * 0.6 * ps['rib'] if box_type=="علبة شريط (Kurdele)" else 0
+    ribbon_cost = qty * 0.6 * ps['rib'] if "Kurdele" in box_type else 0
 
     total = cost_board + cost_paper + zinc_cost + ribbon_cost + ps['lab'] + ps['mold'] + ps['print'] + ps['lam'] + ps['cut']
 
     st.markdown(f"""
     <div class='result-card'>
-    الكارتون: {int(total_board)} × {ps['p_b']} = {int(cost_board)}<br>
-    الورق: {int(total_paper)} × {paper_price} = {int(cost_paper)}<br>
-    الزنك: {int(zinc_cost)}<br>
-    الشريط: {int(ribbon_cost)}<br>
-    <hr>
-    <h2>الإجمالي: {int(total)}</h2>
-    <h3>سعر القطعة: {int(total/qty)}</h3>
+    <h2>{T['total']}: {int(total)}</h2>
+    <h3>{T['unit']}: {int(total/qty)}</h3>
     </div>
     """, unsafe_allow_html=True)
