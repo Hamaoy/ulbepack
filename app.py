@@ -59,6 +59,42 @@ T = {
 }[lang]
 
 # ================== DEFAULT PRICES ==================
+# 🟢 رجعنا قائمة الأسعار (Sidebar)
+with st.sidebar:
+    st.header("💰 التحكم بالاسعار")
+
+    if 'p' not in st.session_state:
+        st.session_state.p = {
+            "p_b": 1200,
+            "p_p": 250,
+            "dig": 1500,
+            "rib": 300,
+            "lab": 50000,
+            "mold": 100000,
+            "print": 40000,
+            "lam": 60000,
+            "cut": 130000,
+            "zinc": 25000,
+            "waste": 5
+        }
+
+    ps = st.session_state.p
+
+    ps["p_b"] = st.number_input("سعر الكارتون", value=ps["p_b"])
+    ps["p_p"] = st.number_input("سعر ورق اوفست", value=ps["p_p"])
+    ps["dig"] = st.number_input("سعر ورق ديجيتال", value=ps["dig"])
+    ps["rib"] = st.number_input("سعر متر الشريط", value=ps["rib"])
+
+    st.markdown("---")
+    ps["lab"] = st.number_input("اجور العمال", value=ps["lab"])
+    ps["mold"] = st.number_input("القالب", value=ps["mold"])
+    ps["print"] = st.number_input("الطبع", value=ps["print"])
+    ps["lam"] = st.number_input("السلفنة", value=ps["lam"])
+    ps["cut"] = st.number_input("الداي كت", value=ps["cut"])
+    ps["zinc"] = st.number_input("سعر الزنك/لون", value=ps["zinc"])
+    ps["waste"] = st.number_input("نسبة الهدر %", value=ps["waste"])
+
+# ================== DEFAULT PRICES ==================
 if 'p' not in st.session_state:
     st.session_state.p = {
         "p_b": 1200,
@@ -174,6 +210,24 @@ if st.button(T["calc"]):
 
     st.markdown(f"""
     <div class='result-card'>
+
+    <b>تفاصيل الكارتون:</b><br>
+    {int(total_board)} × {ps['p_b']} = {int(cost_board)}<br><br>
+
+    <b>تفاصيل الورق:</b><br>
+    {int(total_paper)} × {paper_price} = {int(cost_paper)}<br><br>
+
+    <b>الزنك:</b> {int(zinc_cost)}<br>
+    <b>الشريط:</b> {int(ribbon_cost)}<br><br>
+
+    <b>اجور العمل:</b><br>
+    عمال: {ps['lab']}<br>
+    قالب: {ps['mold']}<br>
+    طبع: {ps['print']}<br>
+    سلفنة: {ps['lam']}<br>
+    دايكت: {ps['cut']}<br>
+
+    <hr>
     <h2>{T['total']}: {int(total)}</h2>
     <h3>{T['unit']}: {int(total/qty)}</h3>
     </div>
