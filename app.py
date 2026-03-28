@@ -135,52 +135,89 @@ with col2:
     H = st.number_input("H", value=5.0)
 
 # ================= CORE =================
-def get_parts(L, W, H, key):
-    if key == "kapak":
-        return [("Base", L+2*H, W+2*H), ("Lid", L+6.5, W+6.5)]
-    else:
-        return [("Main", L+2*H, W+2*H)]
+SHEET_W = 70
+SHEET_H = 100
 
-def fit(sw, sh, w, h):
-    if w > sw or h > sh:
+
+def safe_div(a, b):
+    return math.ceil(a / b) if b and b > 0 else float("inf")
+
+
+def rotate_fit(w, h):
+    if w <= 0 or h <= 0:
         return 0
-    return max((sw//w)*(sh//h), (sh//w)*(sw//h))
 
-def calc_details(parts, sw, sh):
-    details = []
-    total = 0
-    for name, w, h in parts:
-        per = fit(sw, sh, w, h)
-        sheets = math.ceil(qty / per) if per else 0
-        details.append((name, per, sheets))
-        total += sheets
-    return details, total
+    normal = (SHEET_W // w) * (SHEET_H // h)
+    rotated = (SHEET_W // h) * (SHEET_H // w)
 
-def safe_div(qty, per_sheet):
-    return math.ceil(qty / per_sheet) if per_sheet else float("inf")
+    return max(normal, rotated)
 
 
-def smart_combine(parts):
-    if len(parts) != 2:
-        return None
+def get_per_sheet(w, h):
+    return rotate_fit(w, h)
+
+
+def calc_single(qty, w, h):
+    per = get_per_sheet(w, h)
+    return per, safe_div(qty, per)
+
+
+def calc_combined(qty, w1, h1, w2, h2):
+    per = get_per_sheet(w1 + w2, max(h1, h2))
+    return per, safe_div(qty, per)
+
+
+def calc_hybrid(qty, w1, h1, w2, h2):
+    best_per = 0
+    best_sheets = float("inf")
+
+    for b in range(1, 6):
+        for l in range(1, 6):
+
+            total_w = b * w1 + l * w2
+            max_h = max(h1, h2)
+
+            per = max(
+                (SHEET_W // total_w) * (SHEET_H // max_h),
+                (SHEET_W // max_h) * (SHEET_H // total_w)
+            )
+
+            if per > 0:
+                sheets = safe_div(qty, per)
+                if sheets < best_sheets:
+                    best_sheets = sheets
+                    best_per = per
+
+    return best_per, best_sheets
+
+
+def smart_engine(qty, parts):
+
+    if len(parts) == 1:
+        name, w, h = parts[0]
+        per, sheets = calc_single(qty, w, h)
+        return [(name, per, sheets)], sheets
 
     (_, w1, h1), (_, w2, h2) = parts
 
-    # Separate
-    sep = sum([
-        safe_div(qty, fit(70,100,w,h))
-        for _, w, h in parts
-    ])
+    # separate
+    details = []
+    total_sep = 0
 
-    # Combine Horizontal
-    per_h = fit(70,100, w1+w2, max(h1,h2))
-    comb_h = safe_div(qty, per_h)
+    for name, w, h in parts:
+        per, sheets = calc_single(qty, w, h)
+        details.append((name, per, sheets))
+        total_sep += sheets
 
-    # Combine Vertical
-    per_v = fit(70,100, max(w1,w2), h1+h2)
-    comb_v = safe_div(qty, per_v)
+    # combined
+    _, combined = calc_combined(qty, w1, h1, w2, h2)
 
-    return min(sep, comb_h, comb_v)
+    # hybrid
+    _, hybrid = calc_hybrid(qty, w1, h1, w2, h2)
+
+    best = min(total_sep, combined, hybrid)
+
+    return details, best
 
 # ================= CALC =================
 if st.button(TEXT["calc"]):
@@ -188,13 +225,8 @@ if st.button(TEXT["calc"]):
     box_key = BOX_TYPES[lang][box_type]
     parts = get_parts(L, W, H, box_key)
 
-    # ===== BOARD =====
-    board_details, board_total = calc_details(parts, 70, 100)
-
-    # Smart combine
-    combined = smart_combine(parts)
-    if combined:
-        board_total = combined
+   # ===== BOARD (SMART ENGINE) =====
+board_details, board_total = smart_engine(qty, parts)
 
     # ===== PAPER =====
     if print_method == "Offset":
@@ -202,7 +234,7 @@ if st.button(TEXT["calc"]):
     else:
         pw, ph = 33, 70
 
-    paper_details, paper_total = calc_details(parts, pw, ph)
+   paper_parts, paper_total = smart_engine(qty, parts)
 
     # ===== WASTE =====
     board_total = math.ceil(board_total * (1 + ps["waste"]))
