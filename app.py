@@ -180,7 +180,7 @@ def calc_hybrid(qty, w1, h1, w2, h2):
 
 def smart_engine(qty, parts):
 
-    merged_used = False  # 👈 هذا الجديد
+    merged_used = False
 
     if len(parts) == 1:
         name, w, h = parts[0]
@@ -202,7 +202,6 @@ def smart_engine(qty, parts):
 
     best = min(total_sep, combined, hybrid)
 
-    # 👇 إذا الكومباين أو الهجيني أفضل من الفصل
     if best < total_sep:
         merged_used = True
 
@@ -235,12 +234,12 @@ if st.button(TEXT["calc"]):
     box_key = BOX_TYPES[lang][box_type]
     parts = get_parts(L, W, H, box_key)
 
-    board_details, board_total = smart_engine(qty, parts)
+    board_details, board_total, board_merged = smart_engine(qty, parts)
 
     if print_method == "Offset":
-        paper_details, paper_total = smart_engine(qty, parts)
+        paper_details, paper_total, paper_merged = smart_engine(qty, parts)
     else:
-        paper_details, paper_total = smart_engine(qty, parts)
+        paper_details, paper_total, paper_merged = smart_engine(qty, parts)
 
     board_total = math.ceil(board_total * (1 + ps["waste"]))
     paper_total = math.ceil(paper_total * (1 + ps["waste"]))
@@ -283,3 +282,10 @@ if st.button(TEXT["calc"]):
         <h3>Unit: {total/qty:,.0f}</h3>
     </div>
     """, unsafe_allow_html=True)
+    
+    # ================= NOTES =================
+if board_merged or paper_merged:
+    st.markdown("""
+    ⚡ **Smart Optimization Used!**  
+    تم دمج (علبة + قبغ) على نفس الشيت لتقليل الهدر وعدد الشيتات.
+    """)
