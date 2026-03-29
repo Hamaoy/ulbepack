@@ -310,5 +310,5 @@ if st.button(TEXT["calc"]):
     if board_merged or paper_merged:
         st.markdown("""
         ⚡ **Smart Optimization Used!**  
-        تم دمج (علبة + قبغ) داخل نفس الشيت لتقليل عدد الشيتات والهدر.
+        تم دمج (علبة + قبغ) داخل نفس الشيت لتقليل عدد الشيتات والهدر Kutu ve kapak aynı sheet içinde birleştirildi, böylece sheet sayısı ve fire azaltıldı..
         """)
