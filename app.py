@@ -284,8 +284,11 @@ if st.button(TEXT["calc"]):
     """, unsafe_allow_html=True)
     
     # ================= NOTES =================
+board_merged = False
+paper_merged = False
+
+board_details, board_total, board_merged = smart_engine(qty, parts)
+paper_details, paper_total, paper_merged = smart_engine(qty, parts)
+
 if board_merged or paper_merged:
-    st.markdown("""
-    ⚡ **Smart Optimization Used!**  
-    تم دمج (علبة + قبغ) على نفس الشيت لتقليل الهدر وعدد الشيتات.
-    """)
+    st.markdown("⚡ Smart Optimization Used!")
