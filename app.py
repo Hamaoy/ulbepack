@@ -180,10 +180,12 @@ def calc_hybrid(qty, w1, h1, w2, h2):
 
 def smart_engine(qty, parts):
 
+    merged_used = False  # 👈 هذا الجديد
+
     if len(parts) == 1:
         name, w, h = parts[0]
         per, sheets = calc_single(qty, w, h)
-        return [(name, per, sheets)], sheets
+        return [(name, per, sheets)], sheets, merged_used
 
     (_, w1, h1), (_, w2, h2) = parts
 
@@ -200,7 +202,11 @@ def smart_engine(qty, parts):
 
     best = min(total_sep, combined, hybrid)
 
-    return details, best
+    # 👇 إذا الكومباين أو الهجيني أفضل من الفصل
+    if best < total_sep:
+        merged_used = True
+
+    return details, best, merged_used
 
 
 def get_parts(L, W, H, box_type):
