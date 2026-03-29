@@ -163,21 +163,28 @@ def calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h):
     best_per = 0
     best_sheets = float("inf")
 
-    for b in range(1, 6):
-        for l in range(1, 6):
-            total_w = b * w1 + l * w2
-            max_h = max(h1, h2)
+    # نجرب توزيع Grid حقيقي
+    for rows in range(1, 5):
+        for cols in range(1, 5):
 
-            if total_w <= 0:
-                continue
+            # نقسم الشبكة بين base و lid
+            for b in range(1, rows * cols):
+                l = rows * cols - b
 
-            per = max(
-                (sheet_w // total_w) * (sheet_h // max_h),
-                (sheet_w // max_h) * (sheet_h // total_w)
-            )
+                # نحسب المساحة المطلوبة
+                avg_w = (b * w1 + l * w2) / (rows * cols)
+                avg_h = (b * h1 + l * h2) / (rows * cols)
 
-            if per > 0:
+                total_w = cols * avg_w
+                total_h = rows * avg_h
+
+                if total_w > sheet_w or total_h > sheet_h:
+                    continue
+
+                per = rows * cols
+
                 sheets = safe_div(qty, per)
+
                 if sheets < best_sheets:
                     best_sheets = sheets
                     best_per = per
