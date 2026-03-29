@@ -37,7 +37,7 @@ if not st.session_state.auth:
     st.stop()
 
 # ================= LOGO =================
-col1, col2, col3 = st.columns([1,2,1])
+col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if os.path.exists("logo.png"):
         st.image("logo.png")
@@ -46,8 +46,20 @@ with col2:
 lang = st.radio("Language", ["AR", "TR"], horizontal=True)
 
 TEXT = {
-    "AR": {"title": "نظام ULBE", "box": "نوع العلبة", "print": "الطباعة", "qty": "الكمية", "calc": "احسب"},
-    "TR": {"title": "ULBE Sistem", "box": "Kutu Tipi", "print": "Baskı", "qty": "Adet", "calc": "Hesapla"}
+    "AR": {
+        "title": "نظام ULBE",
+        "box": "نوع العلبة",
+        "print": "الطباعة",
+        "qty": "الكمية",
+        "calc": "احسب"
+    },
+    "TR": {
+        "title": "ULBE Sistem",
+        "box": "Kutu Tipi",
+        "print": "Baskı",
+        "qty": "Adet",
+        "calc": "Hesapla"
+    }
 }[lang]
 
 # ================= BOX TYPES =================
@@ -104,7 +116,7 @@ with st.sidebar:
     ps["lam"] = st.number_input("Lamination", value=ps["lam"])
     ps["cut"] = st.number_input("Cutting", value=ps["cut"])
 
-    ps["waste"] = st.number_input("Waste %", value=int(ps["waste"]*100)) / 100
+    ps["waste"] = st.number_input("Waste %", value=int(ps["waste"] * 100)) / 100
 
 # ================= INPUT =================
 st.title(TEXT["title"])
@@ -123,41 +135,36 @@ with col2:
     H = st.number_input("H", value=5.0)
 
 # ================= CORE =================
-SHEET_W = 70
-SHEET_H = 100
-
-
 def safe_div(a, b):
     return math.ceil(a / b) if b and b > 0 else float("inf")
 
 
-def rotate_fit(w, h):
+def rotate_fit(w, h, sheet_w, sheet_h):
     if w <= 0 or h <= 0:
         return 0
 
-    normal = (SHEET_W // w) * (SHEET_H // h)
-    rotated = (SHEET_W // h) * (SHEET_H // w)
+    normal = (sheet_w // w) * (sheet_h // h)
+    rotated = (sheet_w // h) * (sheet_h // w)
 
     return max(normal, rotated)
 
 
-def calc_single(qty, w, h):
-    per = rotate_fit(w, h)
+def calc_single(qty, w, h, sheet_w, sheet_h):
+    per = rotate_fit(w, h, sheet_w, sheet_h)
     return per, safe_div(qty, per)
 
 
-def calc_combined(qty, w1, h1, w2, h2):
-    per = rotate_fit(w1 + w2, max(h1, h2))
+def calc_combined(qty, w1, h1, w2, h2, sheet_w, sheet_h):
+    per = rotate_fit(w1 + w2, max(h1, h2), sheet_w, sheet_h)
     return per, safe_div(qty, per)
 
 
-def calc_hybrid(qty, w1, h1, w2, h2):
+def calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h):
     best_per = 0
     best_sheets = float("inf")
 
     for b in range(1, 6):
         for l in range(1, 6):
-
             total_w = b * w1 + l * w2
             max_h = max(h1, h2)
 
@@ -165,8 +172,8 @@ def calc_hybrid(qty, w1, h1, w2, h2):
                 continue
 
             per = max(
-                (SHEET_W // total_w) * (SHEET_H // max_h),
-                (SHEET_W // max_h) * (SHEET_H // total_w)
+                (sheet_w // total_w) * (sheet_h // max_h),
+                (sheet_w // max_h) * (sheet_h // total_w)
             )
 
             if per > 0:
@@ -178,13 +185,12 @@ def calc_hybrid(qty, w1, h1, w2, h2):
     return best_per, best_sheets
 
 
-def smart_engine(qty, parts):
-
+def smart_engine(qty, parts, sheet_w, sheet_h):
     merged_used = False
 
     if len(parts) == 1:
         name, w, h = parts[0]
-        per, sheets = calc_single(qty, w, h)
+        per, sheets = calc_single(qty, w, h, sheet_w, sheet_h)
         return [(name, per, sheets)], sheets, merged_used
 
     (_, w1, h1), (_, w2, h2) = parts
@@ -193,12 +199,12 @@ def smart_engine(qty, parts):
     total_sep = 0
 
     for name, w, h in parts:
-        per, sheets = calc_single(qty, w, h)
+        per, sheets = calc_single(qty, w, h, sheet_w, sheet_h)
         details.append((name, per, sheets))
         total_sep += sheets
 
-    _, combined = calc_combined(qty, w1, h1, w2, h2)
-    _, hybrid = calc_hybrid(qty, w1, h1, w2, h2)
+    _, combined = calc_combined(qty, w1, h1, w2, h2, sheet_w, sheet_h)
+    _, hybrid = calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h)
 
     best = min(total_sep, combined, hybrid)
 
@@ -212,21 +218,20 @@ def get_parts(L, W, H, box_type):
 
     if box_type == "kapak":
         return [
-            ("Base", L + 2*H, W + 2*H),
+            ("Base", L + 2 * H, W + 2 * H),
             ("Lid", L + 6.5, W + 6.5)
         ]
 
     elif box_type == "magnetic":
         return [
-            ("Body", L + 2*H, W + 2*H),
+            ("Body", L + 2 * H, W + 2 * H),
             ("Cover", L + 4, W + 4)
         ]
 
     else:
         return [
-            ("Main", L + 2*H, W + 2*H)
+            ("Main", L + 2 * H, W + 2 * H)
         ]
-
 
 # ================= CALC =================
 if st.button(TEXT["calc"]):
@@ -234,21 +239,25 @@ if st.button(TEXT["calc"]):
     box_key = BOX_TYPES[lang][box_type]
     parts = get_parts(L, W, H, box_key)
 
-    board_details, board_total, board_merged = smart_engine(qty, parts)
+    # Board always uses 70x100
+    board_details, board_total, board_merged = smart_engine(qty, parts, 70, 100)
 
+    # Paper depends on print method
     if print_method == "Offset":
-        paper_details, paper_total, paper_merged = smart_engine(qty, parts)
+        paper_sheet_w, paper_sheet_h = 70, 100
     else:
-        paper_details, paper_total, paper_merged = smart_engine(qty, parts)
+        paper_sheet_w, paper_sheet_h = 33, 70
 
+    paper_details, paper_total, paper_merged = smart_engine(qty, parts, paper_sheet_w, paper_sheet_h)
+
+    # Waste
     board_total = math.ceil(board_total * (1 + ps["waste"]))
     paper_total = math.ceil(paper_total * (1 + ps["waste"]))
 
+    # Cost
     cost_board = board_total * ps["board"]
-
     paper_price = ps["offset"] if print_method == "Offset" else ps["digital"]
     cost_paper = paper_total * paper_price
-
     labor = ps["labor"] * qty
     zinc = colors * ps["zinc"] if print_method == "Offset" else 0
 
@@ -266,7 +275,7 @@ if st.button(TEXT["calc"]):
     for n, per, s in paper_details:
         st.write(f"{n}: {per} per sheet → {s} sheets")
 
-        st.markdown(f"""
+    st.markdown(f"""
     <div class='result-card'>
         <h3>Production Cost</h3>
         Board: {cost_board:,.0f}<br>
