@@ -266,7 +266,7 @@ if st.button(TEXT["calc"]):
     for n, per, s in paper_details:
         st.write(f"{n}: {per} per sheet → {s} sheets")
 
-    st.markdown(f"""
+        st.markdown(f"""
     <div class='result-card'>
         <h3>Production Cost</h3>
         Board: {cost_board:,.0f}<br>
@@ -282,13 +282,10 @@ if st.button(TEXT["calc"]):
         <h3>Unit: {total/qty:,.0f}</h3>
     </div>
     """, unsafe_allow_html=True)
-    
+
     # ================= NOTES =================
-board_merged = False
-paper_merged = False
-
-board_details, board_total, board_merged = smart_engine(qty, parts)
-paper_details, paper_total, paper_merged = smart_engine(qty, parts)
-
-if board_merged or paper_merged:
-    st.markdown("⚡ Smart Optimization Used!")
+    if board_merged or paper_merged:
+        st.markdown("""
+        ⚡ **Smart Optimization Used!**  
+        تم دمج (علبة + قبغ) داخل نفس الشيت لتقليل عدد الشيتات والهدر.
+        """)
