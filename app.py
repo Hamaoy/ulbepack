@@ -186,32 +186,39 @@ def calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h):
 
 
 def smart_engine(qty, parts, sheet_w, sheet_h):
-    merged_used = False
 
     if len(parts) == 1:
         name, w, h = parts[0]
         per, sheets = calc_single(qty, w, h, sheet_w, sheet_h)
-        return [(name, per, sheets)], sheets, merged_used
+        return [(name, per, sheets)], sheets, False
 
     (_, w1, h1), (_, w2, h2) = parts
 
-    details = []
-    total_sep = 0
+    # ===== Separate =====
+    sep_details = []
+    sep_total = 0
 
     for name, w, h in parts:
         per, sheets = calc_single(qty, w, h, sheet_w, sheet_h)
-        details.append((name, per, sheets))
-        total_sep += sheets
+        sep_details.append((name, per, sheets))
+        sep_total += sheets
 
-    _, combined = calc_combined(qty, w1, h1, w2, h2, sheet_w, sheet_h)
-    _, hybrid = calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h)
+    # ===== Combined =====
+    per_c, comb_total = calc_combined(qty, w1, h1, w2, h2, sheet_w, sheet_h)
 
-    best = min(total_sep, combined, hybrid)
+    # ===== Hybrid =====
+    per_h, hybrid_total = calc_hybrid(qty, w1, h1, w2, h2, sheet_w, sheet_h)
 
-    if best < total_sep:
-        merged_used = True
+    best = min(sep_total, comb_total, hybrid_total)
 
-    return details, best, merged_used
+    if best == sep_total:
+        return sep_details, sep_total, False
+
+    elif best == comb_total:
+        return [("Combined Layout", per_c, comb_total)], comb_total, True
+
+    else:
+        return [("Hybrid Layout", per_h, hybrid_total)], hybrid_total, True
 
 
 def get_parts(L, W, H, box_type):
